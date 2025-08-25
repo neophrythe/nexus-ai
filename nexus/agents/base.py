@@ -6,6 +6,14 @@ import numpy as np
 from datetime import datetime
 import structlog
 
+# TensorBoard integration
+try:
+    from nexus.visualization.tensorboard_logger import TensorBoardLogger
+    from nexus.visualization.metrics_tracker import MetricsTracker
+    HAS_TENSORBOARD = True
+except ImportError:
+    HAS_TENSORBOARD = False
+
 logger = structlog.get_logger()
 
 
@@ -84,7 +92,9 @@ class BaseAgent(ABC):
                  agent_type: AgentType,
                  observation_space: Any = None,
                  action_space: Any = None,
-                 config: Optional[Dict[str, Any]] = None):
+                 config: Optional[Dict[str, Any]] = None,
+                 tensorboard_logger: Optional['TensorBoardLogger'] = None,
+                 enable_tensorboard: bool = True):
         
         self.name = name
         self.agent_type = agent_type
@@ -102,7 +112,20 @@ class BaseAgent(ABC):
         self._current_episode_steps = 0
         self._initialized = False
         
-        logger.info(f"Agent {name} ({agent_type.value}) created")
+        # TensorBoard integration
+        self.enable_tensorboard = enable_tensorboard and HAS_TENSORBOARD
+        self.tb_logger = tensorboard_logger
+        self.metrics_tracker = None
+        
+        if self.enable_tensorboard and not self.tb_logger:
+            # Create default TensorBoard logger
+            log_dir = self.config.get("log_dir", f"./runs/{name}")
+            self.tb_logger = TensorBoardLogger(log_dir=log_dir, experiment_name=name)
+            self.metrics_tracker = MetricsTracker(tensorboard_logger=self.tb_logger)
+        elif self.enable_tensorboard and self.tb_logger:
+            self.metrics_tracker = MetricsTracker(tensorboard_logger=self.tb_logger)
+        
+        logger.info(f"Agent {name} ({agent_type.value}) created with TensorBoard: {self.enable_tensorboard}")
     
     @abstractmethod
     async def initialize(self) -> None:
@@ -124,7 +147,13 @@ class BaseAgent(ABC):
         """Learn from experience - must be implemented by subclasses"""
         # Base implementation for abstract method - should be overridden
         logger.debug(f"BaseAgent.learn() called - should be overridden by {self.__class__.__name__}")
-        return {"loss": 0.0, "status": "no_learning"}
+        result = {"loss": 0.0, "status": "no_learning"}
+        
+        # Log to TensorBoard if enabled
+        if self.metrics_tracker:
+            self.metrics_tracker.track_training(result.get("loss", 0.0))
+        
+        return result
     
     @abstractmethod
     def save(self, path: str) -> None:
@@ -200,6 +229,25 @@ class BaseAgent(ABC):
                 self._current_episode_steps,
                 won
             )
+            
+            # Log episode to TensorBoard
+            if self.metrics_tracker:
+                self.metrics_tracker.track_episode(
+                    self.metrics.total_episodes,
+                    self._current_episode_reward,
+                    self._current_episode_steps,
+                    won,
+                    experience.info
+                )
+            
+            if self.tb_logger:
+                self.tb_logger.log_episode(
+                    self.metrics.total_episodes,
+                    self._current_episode_reward,
+                    self._current_episode_steps,
+                    {"won": won, **experience.info}
+                )
+            
             self._current_episode_reward = 0.0
             self._current_episode_steps = 0
     
@@ -254,6 +302,26 @@ class BaseAgent(ABC):
     def clear_buffer(self) -> None:
         self.experience_buffer.clear()
         logger.info(f"Experience buffer cleared for agent {self.name}")
+    
+    def log_frame(self, frame: np.ndarray, overlays: Dict[str, Any] = None):
+        """Log a game frame to TensorBoard with optional overlays."""
+        if self.tb_logger:
+            self.tb_logger.log_game_frame(frame, overlays, self.metrics.total_steps)
+    
+    def log_metrics(self, metrics: Dict[str, float]):
+        """Log custom metrics to TensorBoard."""
+        if self.tb_logger:
+            self.tb_logger.log_agent_metrics(self.name, metrics, self.metrics.total_steps)
+        if self.metrics_tracker:
+            for key, value in metrics.items():
+                self.metrics_tracker.track(f"{self.name}/{key}", value)
+    
+    def close_tensorboard(self):
+        """Close TensorBoard logger."""
+        if self.tb_logger:
+            self.tb_logger.close()
+        self.tb_logger = None
+        self.metrics_tracker = None
 
 
 class PolicyBasedAgent(BaseAgent):

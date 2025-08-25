@@ -70,3 +70,21 @@ transformers>=4.35.0
 
 # Visualization
 matplotlib>=3.7.0
+
+# TensorBoard Integration (already included above)
+# tensorboard>=2.14.0
+
+# Controller Support
+pygame>=2.5.0  # For generic controller support
+hidapi>=0.14.0  # For direct HID communication
+XInput-Python>=0.4.0; sys_platform == 'win32'  # Xbox controller on Windows
+evdev>=1.6.0; sys_platform == 'linux'  # Linux controller support
+
+# Mobile Support (Android)
+# Note: ADB should be installed separately as part of Android SDK
+# pure-python-adb>=0.3.0  # Optional: Pure Python ADB implementation
+
+# Additional dependencies for new features
+psutil>=5.9.0  # System monitoring (already included)
+scipy>=1.11.0  # For advanced signal processing in haptics
+sounddevice>=0.4.6  # For audio-to-haptic conversion
