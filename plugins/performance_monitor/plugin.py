@@ -7,6 +7,8 @@ Monitors game and system performance metrics in real-time.
 import time
 import psutil
 import threading
+import sys
+import subprocess
 from typing import Dict, Any, Optional, List, Callable
 from collections import deque
 import numpy as np
@@ -78,6 +80,14 @@ class PerformanceMonitorPlugin(PluginBase):
         
         # GPU monitoring (if available)
         self.gpu_available = self._check_gpu_monitoring()
+        self.gpu_type = None
+        self.gpu_name = "Unknown"
+        self.gpu_device_count = 0
+        self.gpu_memory_total = 0
+        self.gpu_memory_used = 0
+        self.gpu_memory_percent = 0.0
+        self.gpu_temperature = None
+        self.gpu_power = None
         
     def on_load(self):
         """Called when plugin is loaded."""
@@ -293,25 +303,115 @@ class PerformanceMonitorPlugin(PluginBase):
     
     def _check_gpu_monitoring(self) -> bool:
         """Check if GPU monitoring is available."""
+        # Try multiple GPU monitoring methods
+        gpu_monitors = [
+            self._check_nvidia_gpu,
+            self._check_amd_gpu,
+            self._check_intel_gpu,
+            self._check_gputil,
+            self._check_wmi_gpu
+        ]
+        
+        for monitor in gpu_monitors:
+            try:
+                if monitor():
+                    return True
+            except Exception as e:
+                logger.debug(f"GPU monitor check failed: {e}")
+        
+        return False
+    
+    def _check_nvidia_gpu(self) -> bool:
+        """Check for NVIDIA GPU monitoring."""
         try:
-            # Try nvidia-ml-py for NVIDIA GPUs
             import pynvml
             pynvml.nvmlInit()
-            self.gpu_type = 'nvidia'
-            return True
-        except:
-            pass
-        
+            device_count = pynvml.nvmlDeviceGetCount()
+            if device_count > 0:
+                self.gpu_type = 'nvidia'
+                self.gpu_device_count = device_count
+                # Get GPU info
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                self.gpu_name = pynvml.nvmlDeviceGetName(handle).decode('utf-8')
+                self.gpu_memory_total = pynvml.nvmlDeviceGetMemoryInfo(handle).total
+                return True
+        except ImportError:
+            logger.debug("pynvml not installed")
+        except Exception as e:
+            logger.debug(f"NVIDIA GPU detection error: {e}")
+        return False
+    
+    def _check_amd_gpu(self) -> bool:
+        """Check for AMD GPU monitoring."""
         try:
-            # Try GPUtil as fallback
+            # Check for AMD GPU using rocm-smi or ADL
+            import subprocess
+            result = subprocess.run(
+                ['rocm-smi', '--showuse'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            if result.returncode == 0:
+                self.gpu_type = 'amd'
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        return False
+    
+    def _check_intel_gpu(self) -> bool:
+        """Check for Intel GPU monitoring."""
+        try:
+            # Check for Intel GPU using intel_gpu_top
+            import subprocess
+            result = subprocess.run(
+                ['intel_gpu_top', '-l'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            if result.returncode == 0:
+                self.gpu_type = 'intel'
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        return False
+    
+    def _check_gputil(self) -> bool:
+        """Check for GPUtil monitoring."""
+        try:
             import GPUtil
             gpus = GPUtil.getGPUs()
             if gpus:
                 self.gpu_type = 'gputil'
+                self.gpu_device_count = len(gpus)
+                self.gpu_name = gpus[0].name
+                self.gpu_memory_total = gpus[0].memoryTotal * 1024 * 1024  # Convert to bytes
                 return True
-        except:
-            pass
+        except ImportError:
+            logger.debug("GPUtil not installed")
+        except Exception as e:
+            logger.debug(f"GPUtil detection error: {e}")
+        return False
+    
+    def _check_wmi_gpu(self) -> bool:
+        """Check for Windows WMI GPU monitoring."""
+        if sys.platform != 'win32':
+            return False
         
+        try:
+            import wmi
+            c = wmi.WMI()
+            gpus = c.Win32_VideoController()
+            if gpus:
+                self.gpu_type = 'wmi'
+                self.gpu_name = gpus[0].Name
+                self.gpu_memory_total = gpus[0].AdapterRAM if gpus[0].AdapterRAM else 0
+                return True
+        except ImportError:
+            logger.debug("WMI not installed")
+        except Exception as e:
+            logger.debug(f"WMI GPU detection error: {e}")
         return False
     
     def _get_gpu_usage(self) -> Optional[float]:
@@ -321,40 +421,204 @@ class PerformanceMonitorPlugin(PluginBase):
         
         try:
             if self.gpu_type == 'nvidia':
-                import pynvml
-                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-                util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                return util.gpu
+                return self._get_nvidia_gpu_usage()
+            elif self.gpu_type == 'amd':
+                return self._get_amd_gpu_usage()
+            elif self.gpu_type == 'intel':
+                return self._get_intel_gpu_usage()
             elif self.gpu_type == 'gputil':
-                import GPUtil
-                gpus = GPUtil.getGPUs()
-                if gpus:
-                    return gpus[0].load * 100
-        except:
-            pass
+                return self._get_gputil_usage()
+            elif self.gpu_type == 'wmi':
+                return self._get_wmi_gpu_usage()
+        except Exception as e:
+            logger.error(f"GPU usage reading error: {e}")
         
         return None
     
+    def _get_nvidia_gpu_usage(self) -> Optional[float]:
+        """Get NVIDIA GPU usage."""
+        try:
+            import pynvml
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            
+            # Also get memory usage and temperature
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            self.gpu_memory_used = mem_info.used
+            self.gpu_memory_percent = (mem_info.used / mem_info.total) * 100
+            
+            try:
+                self.gpu_temperature = pynvml.nvmlDeviceGetTemperature(
+                    handle, pynvml.NVML_TEMPERATURE_GPU
+                )
+            except:
+                self.gpu_temperature = None
+            
+            # Get power usage
+            try:
+                self.gpu_power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # Convert to watts
+            except:
+                self.gpu_power = None
+            
+            return float(util.gpu)
+        except Exception as e:
+            logger.error(f"NVIDIA GPU usage error: {e}")
+            return None
+    
+    def _get_amd_gpu_usage(self) -> Optional[float]:
+        """Get AMD GPU usage."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['rocm-smi', '--showuse', '--json'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            if result.returncode == 0:
+                import json
+                data = json.loads(result.stdout)
+                # Parse AMD GPU usage from JSON
+                if 'card0' in data:
+                    return float(data['card0']['GPU use (%)'])
+        except Exception as e:
+            logger.error(f"AMD GPU usage error: {e}")
+        return None
+    
+    def _get_intel_gpu_usage(self) -> Optional[float]:
+        """Get Intel GPU usage."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['intel_gpu_top', '-o', '-'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            if result.returncode == 0:
+                # Parse Intel GPU usage from output
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    if 'Render/3D' in line:
+                        parts = line.split()
+                        for part in parts:
+                            if '%' in part:
+                                return float(part.replace('%', ''))
+        except Exception as e:
+            logger.error(f"Intel GPU usage error: {e}")
+        return None
+    
+    def _get_gputil_usage(self) -> Optional[float]:
+        """Get GPU usage via GPUtil."""
+        try:
+            import GPUtil
+            gpus = GPUtil.getGPUs()
+            if gpus:
+                gpu = gpus[0]
+                self.gpu_memory_used = gpu.memoryUsed * 1024 * 1024
+                self.gpu_memory_percent = gpu.memoryUtil * 100
+                self.gpu_temperature = gpu.temperature
+                return gpu.load * 100
+        except Exception as e:
+            logger.error(f"GPUtil usage error: {e}")
+        return None
+    
+    def _get_wmi_gpu_usage(self) -> Optional[float]:
+        """Get GPU usage via WMI on Windows."""
+        try:
+            import wmi
+            c = wmi.WMI(namespace="root\\cimv2")
+            # Try to get GPU usage from performance counters
+            gpu_counters = c.Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine()
+            if gpu_counters:
+                total_usage = sum(float(counter.UtilizationPercentage) for counter in gpu_counters)
+                return min(total_usage, 100.0)
+        except Exception as e:
+            logger.error(f"WMI GPU usage error: {e}")
+        return None
+    
     def _measure_network_latency(self) -> Optional[float]:
-        """Measure network latency."""
+        """Measure network latency using multiple methods."""
+        # Try different methods based on platform
+        if sys.platform == 'win32':
+            return self._measure_latency_windows()
+        elif sys.platform in ['linux', 'linux2']:
+            return self._measure_latency_linux()
+        else:
+            return self._measure_latency_socket()
+    
+    def _measure_latency_windows(self) -> Optional[float]:
+        """Measure latency on Windows using ping."""
+        try:
+            result = subprocess.run(
+                ['ping', '-n', '1', '-w', '1000', '8.8.8.8'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            if result.returncode == 0:
+                # Parse ping output for time
+                import re
+                match = re.search(r'Average = (\d+)ms', result.stdout)
+                if match:
+                    return float(match.group(1))
+        except Exception as e:
+            logger.debug(f"Windows ping failed: {e}")
+        return self._measure_latency_socket()
+    
+    def _measure_latency_linux(self) -> Optional[float]:
+        """Measure latency on Linux using ping."""
+        try:
+            result = subprocess.run(
+                ['ping', '-c', '1', '-W', '1', '8.8.8.8'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            if result.returncode == 0:
+                # Parse ping output for time
+                import re
+                match = re.search(r'time=(\d+\.?\d*)', result.stdout)
+                if match:
+                    return float(match.group(1))
+        except Exception as e:
+            logger.debug(f"Linux ping failed: {e}")
+        return self._measure_latency_socket()
+    
+    def _measure_latency_socket(self) -> Optional[float]:
+        """Measure latency using socket connection."""
         try:
             import socket
-            import struct
             
-            # Simple ping to Google DNS
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1.0)
+            # Test multiple servers for reliability
+            test_servers = [
+                ('8.8.8.8', 53),      # Google DNS
+                ('1.1.1.1', 53),      # Cloudflare DNS
+                ('208.67.222.222', 53) # OpenDNS
+            ]
             
-            start_time = time.time()
-            result = sock.connect_ex(('8.8.8.8', 53))
-            latency = (time.time() - start_time) * 1000  # ms
+            latencies = []
             
-            sock.close()
+            for server_ip, port in test_servers:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(1.0)
+                    
+                    start_time = time.time()
+                    result = sock.connect_ex((server_ip, port))
+                    latency = (time.time() - start_time) * 1000  # ms
+                    
+                    sock.close()
+                    
+                    if result == 0:
+                        latencies.append(latency)
+                except:
+                    continue
             
-            if result == 0:
-                return latency
-        except:
-            pass
+            if latencies:
+                return min(latencies)  # Return best latency
+        except Exception as e:
+            logger.debug(f"Socket latency measurement failed: {e}")
         
         return None
     
