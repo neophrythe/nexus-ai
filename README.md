@@ -8,8 +8,7 @@
 *Turn Any Game Into a Self-Playing AI Sandbox*
 
 <a href="https://github.com/neophrythe/nexus-game-ai/wiki">Wiki</a> • 
-<a href="https://discord.gg/nexus">Discord</a> • 
-<a href="https://www.youtube.com/nexusai">YouTube</a>
+<a href="https://discord.gg/nexus">Discord</a>
 
 </div>
 
@@ -364,7 +363,7 @@ nexus capture --window-title "Exact Window Title"
 **⚠️ DUAL LICENSE - COMMERCIAL USE REQUIRES PAYMENT**
 
 - **Non-Commercial Use:** AGPL-3.0 (free for personal, educational, and research use)
-- **Commercial Use:** Requires paid commercial license - contact neophrythe@users.noreply.github.com
+- **Commercial Use:** Requires paid commercial license - contact contact@digitalmanufacturinglabs.de
 
 Commercial use includes: game bot services, SaaS offerings, proprietary software integration, or any for-profit use.
 
