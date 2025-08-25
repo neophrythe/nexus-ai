@@ -380,7 +380,7 @@ See [LICENSE](LICENSE) file for complete terms.
 - **Discord**: [Join our community](https://discord.gg/nexus)
 - **Issues**: [GitHub Issues](https://github.com/neophrythe/nexus-game-ai/issues)
 - **Wiki**: [Documentation Wiki](https://github.com/neophrythe/nexus-game-ai/wiki)
-- **Email**: support@nexus-ai.dev
+- **Email**: contact@digitalmanufacturinglabs.de
 
 ---
 
