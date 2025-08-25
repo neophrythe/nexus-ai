@@ -1,21 +1,46 @@
-MIT License
-
+Nexus Game AI Framework License
 Copyright (c) 2025 neophrythe
+All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+DUAL LICENSE NOTICE:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This software is available under a dual license model:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. NON-COMMERCIAL USE LICENSE (Open Source)
+-------------------------------------------
+For non-commercial use, this software is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+You may use, modify, and distribute this software for non-commercial purposes only, provided that:
+- You include this license notice in all copies
+- You make your source code available if you modify and distribute this software
+- Any software that uses this code must also be open source under AGPL-3.0
+- You may NOT use this software for commercial purposes without a commercial license
+
+Full AGPL-3.0 license text: https://www.gnu.org/licenses/agpl-3.0.en.html
+
+2. COMMERCIAL USE LICENSE
+--------------------------
+For any commercial use, including but not limited to:
+- Using this software in a commercial product or service
+- Selling products or services that incorporate this software
+- Using this software to develop commercial applications
+- Using this software in a business environment for profit
+
+You MUST obtain a commercial license by contacting: neophrythe@users.noreply.github.com
+
+Commercial licensing options include:
+- One-time license fee
+- Revenue sharing (percentage of gross revenue)
+- Custom enterprise agreements
+
+PROHIBITED USES WITHOUT COMMERCIAL LICENSE:
+- Creating and selling AI game bots
+- Offering this as a service (SaaS)
+- Incorporating into proprietary/closed-source software
+- Using for cryptocurrency/NFT gaming
+- Commercial game automation services
+
+NO WARRANTY:
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+For licensing inquiries: neophrythe@users.noreply.github.com
