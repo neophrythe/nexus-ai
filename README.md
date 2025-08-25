@@ -1,16 +1,17 @@
+<div align="center">
+
 # Nexus Game AI Framework
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/neophrythe/nexus-ai/main/logo.png" alt="Nexus Game AI Framework" width="500">
-</p>
+<img src="https://raw.githubusercontent.com/neophrythe/nexus-ai/main/logo.png" alt="Nexus Game AI Framework" width="500">
 
-<p align="center">
-  <b>Nexus - Game AI Development Framework</b><br>
-  <i>Turn Any Game Into a Self-Playing AI Sandbox</i><br><br>
-  <a href="https://github.com/neophrythe/nexus-game-ai/wiki">Wiki</a> • 
-  <a href="https://discord.gg/nexus">Discord</a> • 
-  <a href="https://www.youtube.com/nexusai">YouTube</a>
-</p>
+**Nexus - Game AI Development Framework**  
+*Turn Any Game Into a Self-Playing AI Sandbox*
+
+<a href="https://github.com/neophrythe/nexus-game-ai/wiki">Wiki</a> • 
+<a href="https://discord.gg/nexus">Discord</a> • 
+<a href="https://www.youtube.com/nexusai">YouTube</a>
+
+</div>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
