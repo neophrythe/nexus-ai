@@ -1,0 +1,27 @@
+# Testing requirements for Nexus framework
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-benchmark>=4.0.0
+
+# Additional testing utilities
+factory-boy>=3.2.0  # Test data generation
+freezegun>=1.2.0    # Time mocking
+responses>=0.20.0   # HTTP mocking
+parameterized>=0.8.1  # Parameterized tests
+
+# Coverage and quality
+coverage>=7.0.0
+pytest-html>=3.0.0  # HTML test reports
+pytest-xdist>=3.0.0  # Parallel test execution
+
+# Performance testing
+memory-profiler>=0.60.0
+pytest-profiling>=1.7.0
+
+# Mocking and fixtures
+pytest-factoryboy>=2.5.0
+pytest-fixtures>=0.1.0

@@ -1,0 +1,282 @@
+"""{{ name }} Game Plugin for Nexus Framework"""
+
+import numpy as np
+from typing import Dict, Any, Optional, Tuple, List
+from pathlib import Path
+import structlog
+
+logger = structlog.get_logger()
+
+
+class {{ name.replace('-', '_').replace(' ', '_').title() }}Plugin:
+    """{{ description }}"""
+    
+    name = "{{ name }}"
+    version = "{{ version }}"
+    author = "{{ author }}"
+    
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize {{ name }} plugin
+        
+        Args:
+            config: Plugin configuration
+        """
+        self.config = config
+        self.fps = config.get("fps", 30)
+        self.window_name = config.get("window_name", "{{ name }}")
+        
+        # Game state
+        self.is_running = False
+        self.current_frame = None
+        self.frame_count = 0
+        
+        # Game window information
+        self.window_geometry = None
+        self.window_handle = None
+        
+        logger.info(f"Initialized {self.name} plugin v{self.version}")
+    
+    def initialize(self):
+        """Initialize plugin resources"""
+        logger.info(f"Initializing {self.name} plugin")
+        
+        # Locate game window
+        self.locate_window()
+        
+        # Load sprites if any
+        self.load_sprites()
+        
+        # Set up capture region
+        self.setup_capture()
+        
+        self.is_running = True
+    
+    def shutdown(self):
+        """Shutdown plugin and clean up resources"""
+        logger.info(f"Shutting down {self.name} plugin")
+        
+        self.is_running = False
+        self.current_frame = None
+        
+        # Clean up resources
+        self.cleanup()
+    
+    def locate_window(self) -> bool:
+        """
+        Locate game window
+        
+        Returns:
+            True if window found
+        """
+        # TODO: Implement window location logic
+        # This would use platform-specific window management
+        
+        logger.info(f"Locating window: {self.window_name}")
+        
+        # Placeholder - would use actual window detection
+        self.window_geometry = {
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080
+        }
+        
+        return True
+    
+    def load_sprites(self):
+        """Load game sprites"""
+        sprites_dir = Path(__file__).parent / "sprites"
+        
+        if not sprites_dir.exists():
+            logger.info("No sprites directory found")
+            return
+        
+        # TODO: Load sprite images
+        logger.info(f"Loading sprites from {sprites_dir}")
+    
+    def setup_capture(self):
+        """Set up screen capture region"""
+        if self.window_geometry:
+            logger.info(f"Capture region: {self.window_geometry}")
+    
+    def cleanup(self):
+        """Clean up resources"""
+        pass
+    
+    def get_game_state(self) -> Dict[str, Any]:
+        """
+        Get current game state
+        
+        Returns:
+            Dictionary containing game state information
+        """
+        return {
+            "is_running": self.is_running,
+            "frame_count": self.frame_count,
+            "window": self.window_geometry,
+            "fps": self.fps
+        }
+    
+    def get_observation_space(self) -> Dict[str, Any]:
+        """
+        Get observation space definition
+        
+        Returns:
+            Observation space specification
+        """
+        if self.window_geometry:
+            return {
+                "type": "image",
+                "shape": (self.window_geometry["height"], 
+                         self.window_geometry["width"], 3),
+                "dtype": "uint8",
+                "min": 0,
+                "max": 255
+            }
+        
+        return {
+            "type": "image",
+            "shape": (1080, 1920, 3),
+            "dtype": "uint8"
+        }
+    
+    def get_action_space(self) -> Dict[str, Any]:
+        """
+        Get action space definition
+        
+        Returns:
+            Action space specification
+        """
+        return {
+            "type": "discrete",
+            "actions": {
+                0: "NONE",
+                1: "UP",
+                2: "DOWN",
+                3: "LEFT",
+                4: "RIGHT",
+                5: "ACTION_1",
+                6: "ACTION_2"
+            },
+            "num_actions": 7
+        }
+    
+    def capture_frame(self) -> Optional[np.ndarray]:
+        """
+        Capture current game frame
+        
+        Returns:
+            Frame as numpy array or None
+        """
+        # TODO: Implement actual frame capture
+        # This would use screen capture libraries
+        
+        # Placeholder - return random frame
+        if self.window_geometry:
+            frame = np.random.randint(0, 255, 
+                (self.window_geometry["height"],
+                 self.window_geometry["width"], 3),
+                dtype=np.uint8)
+            
+            self.current_frame = frame
+            self.frame_count += 1
+            
+            return frame
+        
+        return None
+    
+    def send_input(self, action: Any):
+        """
+        Send input to game
+        
+        Args:
+            action: Action to perform
+        """
+        # TODO: Implement input sending
+        # This would use input libraries
+        
+        logger.debug(f"Sending action: {action}")
+    
+    def reset(self) -> np.ndarray:
+        """
+        Reset game to initial state
+        
+        Returns:
+            Initial observation
+        """
+        logger.info("Resetting game")
+        
+        # TODO: Implement game reset logic
+        
+        self.frame_count = 0
+        return self.capture_frame()
+    
+    def step(self, action: Any) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+        """
+        Execute one step in the game
+        
+        Args:
+            action: Action to take
+        
+        Returns:
+            observation, reward, done, info
+        """
+        # Send input
+        self.send_input(action)
+        
+        # Capture new frame
+        observation = self.capture_frame()
+        
+        # Calculate reward (game-specific)
+        reward = self.calculate_reward(observation, action)
+        
+        # Check if episode is done
+        done = self.is_episode_done(observation)
+        
+        # Additional info
+        info = {
+            "frame_count": self.frame_count,
+            "action": action
+        }
+        
+        return observation, reward, done, info
+    
+    def calculate_reward(self, observation: np.ndarray, action: Any) -> float:
+        """
+        Calculate reward for current state and action
+        
+        Args:
+            observation: Current observation
+            action: Action taken
+        
+        Returns:
+            Reward value
+        """
+        # TODO: Implement game-specific reward calculation
+        return 0.0
+    
+    def is_episode_done(self, observation: np.ndarray) -> bool:
+        """
+        Check if current episode is done
+        
+        Args:
+            observation: Current observation
+        
+        Returns:
+            True if episode is done
+        """
+        # TODO: Implement game-specific termination check
+        return False
+    
+    @classmethod
+    def on_install(cls):
+        """Called when plugin is installed"""
+        print(f"\n{cls.name} plugin was installed successfully!")
+        print(f"Version: {cls.version}")
+        print(f"Author: {cls.author}")
+    
+    @classmethod
+    def on_uninstall(cls):
+        """Called when plugin is uninstalled"""
+        print(f"\n{cls.name} plugin was uninstalled successfully!")

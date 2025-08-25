@@ -1,0 +1,255 @@
+"""{{ name }} Agent Plugin for Nexus Framework"""
+
+import numpy as np
+import torch
+import torch.nn as nn
+from typing import Dict, Any, Optional, List
+from pathlib import Path
+import structlog
+from collections import deque
+import random
+
+logger = structlog.get_logger()
+
+
+class {{ name.replace('-', '_').replace(' ', '_').title() }}Plugin:
+    """{{ description }}"""
+    
+    name = "{{ name }}"
+    version = "{{ version }}"
+    author = "{{ author }}"
+    
+    def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize {{ name }} agent plugin
+        
+        Args:
+            config: Plugin configuration
+        """
+        self.config = config
+        self.model_type = config.get("model_type", "dqn")
+        self.learning_rate = config.get("learning_rate", 0.001)
+        self.batch_size = config.get("batch_size", 32)
+        
+        # Agent components
+        self.model = None
+        self.optimizer = None
+        self.memory = deque(maxlen=10000)
+        
+        # Training stats
+        self.total_steps = 0
+        self.total_episodes = 0
+        self.epsilon = 1.0
+        self.epsilon_decay = 0.995
+        self.epsilon_min = 0.01
+        
+        logger.info(f"Initialized {self.name} agent plugin v{self.version}")
+    
+    def initialize(self):
+        """Initialize agent resources"""
+        logger.info(f"Initializing {self.name} agent")
+        
+        # Initialize model based on type
+        if self.model_type == "dqn":
+            self.initialize_dqn()
+        elif self.model_type == "ppo":
+            self.initialize_ppo()
+        else:
+            raise ValueError(f"Unknown model type: {self.model_type}")
+        
+        # Load saved model if exists
+        self.load_model()
+    
+    def shutdown(self):
+        """Shutdown agent and save state"""
+        logger.info(f"Shutting down {self.name} agent")
+        
+        # Save model
+        self.save_model()
+        
+        # Clean up resources
+        self.model = None
+        self.optimizer = None
+        self.memory.clear()
+    
+    def initialize_dqn(self):
+        """Initialize DQN model"""
+        # Simple DQN network
+        class DQN(nn.Module):
+            def __init__(self, input_dim, output_dim):
+                super().__init__()
+                self.fc1 = nn.Linear(input_dim, 128)
+                self.fc2 = nn.Linear(128, 128)
+                self.fc3 = nn.Linear(128, output_dim)
+            
+            def forward(self, x):
+                x = torch.relu(self.fc1(x))
+                x = torch.relu(self.fc2(x))
+                return self.fc3(x)
+        
+        # TODO: Get actual dimensions from game
+        input_dim = 84 * 84 * 3  # Flattened image
+        output_dim = 7  # Number of actions
+        
+        self.model = DQN(input_dim, output_dim)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        
+        logger.info("Initialized DQN model")
+    
+    def initialize_ppo(self):
+        """Initialize PPO model"""
+        # TODO: Implement PPO initialization
+        logger.info("PPO initialization not yet implemented")
+        self.initialize_dqn()  # Fallback to DQN
+    
+    async def act(self, observation: np.ndarray) -> Any:
+        """
+        Select action given observation
+        
+        Args:
+            observation: Current observation
+        
+        Returns:
+            Selected action
+        """
+        # Epsilon-greedy exploration
+        if random.random() < self.epsilon:
+            # Random action
+            action = random.randint(0, 6)  # TODO: Get from action space
+        else:
+            # Model prediction
+            with torch.no_grad():
+                obs_tensor = torch.FloatTensor(observation.flatten()).unsqueeze(0)
+                q_values = self.model(obs_tensor)
+                action = q_values.argmax().item()
+        
+        self.total_steps += 1
+        
+        # Decay epsilon
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+        
+        return action
+    
+    async def learn(self, experience: Dict[str, Any]):
+        """
+        Learn from experience
+        
+        Args:
+            experience: Dictionary containing state, action, reward, next_state, done
+        """
+        # Add to memory
+        self.memory.append(experience)
+        
+        # Train if enough samples
+        if len(self.memory) >= self.batch_size:
+            await self.train_step()
+    
+    async def train_step(self):
+        """Perform one training step"""
+        if self.model_type == "dqn":
+            await self.train_dqn()
+        elif self.model_type == "ppo":
+            await self.train_ppo()
+    
+    async def train_dqn(self):
+        """Train DQN model"""
+        # Sample batch from memory
+        batch = random.sample(self.memory, self.batch_size)
+        
+        states = torch.FloatTensor([e["state"].flatten() for e in batch])
+        actions = torch.LongTensor([e["action"] for e in batch])
+        rewards = torch.FloatTensor([e["reward"] for e in batch])
+        next_states = torch.FloatTensor([e["next_state"].flatten() for e in batch])
+        dones = torch.FloatTensor([e["done"] for e in batch])
+        
+        # Current Q values
+        current_q = self.model(states).gather(1, actions.unsqueeze(1))
+        
+        # Target Q values
+        with torch.no_grad():
+            next_q = self.model(next_states).max(1)[0]
+            target_q = rewards + (1 - dones) * 0.99 * next_q  # gamma = 0.99
+        
+        # Loss
+        loss = nn.MSELoss()(current_q.squeeze(), target_q)
+        
+        # Optimize
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+    
+    async def train_ppo(self):
+        """Train PPO model"""
+        # TODO: Implement PPO training
+        pass
+    
+    def save_model(self):
+        """Save model to disk"""
+        if self.model is None:
+            return
+        
+        model_dir = Path(__file__).parent / "models"
+        model_dir.mkdir(exist_ok=True)
+        
+        model_path = model_dir / f"{self.model_type}_model.pth"
+        
+        torch.save({
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "epsilon": self.epsilon,
+            "total_steps": self.total_steps,
+            "total_episodes": self.total_episodes
+        }, model_path)
+        
+        logger.info(f"Saved model to {model_path}")
+    
+    def load_model(self):
+        """Load model from disk"""
+        model_dir = Path(__file__).parent / "models"
+        model_path = model_dir / f"{self.model_type}_model.pth"
+        
+        if not model_path.exists():
+            logger.info("No saved model found")
+            return
+        
+        checkpoint = torch.load(model_path)
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.epsilon = checkpoint.get("epsilon", 1.0)
+        self.total_steps = checkpoint.get("total_steps", 0)
+        self.total_episodes = checkpoint.get("total_episodes", 0)
+        
+        logger.info(f"Loaded model from {model_path}")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get agent statistics
+        
+        Returns:
+            Dictionary of statistics
+        """
+        return {
+            "model_type": self.model_type,
+            "total_steps": self.total_steps,
+            "total_episodes": self.total_episodes,
+            "epsilon": self.epsilon,
+            "memory_size": len(self.memory),
+            "learning_rate": self.learning_rate
+        }
+    
+    def reset_episode(self):
+        """Reset for new episode"""
+        self.total_episodes += 1
+    
+    @classmethod
+    def on_install(cls):
+        """Called when plugin is installed"""
+        print(f"\n{cls.name} agent plugin was installed successfully!")
+        print(f"Version: {cls.version}")
+        print(f"Author: {cls.author}")
+    
+    @classmethod
+    def on_uninstall(cls):
+        """Called when plugin is uninstalled"""
+        print(f"\n{cls.name} agent plugin was uninstalled successfully!")

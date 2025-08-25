@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""
+Serpent executable - SerpentAI compatibility wrapper for Nexus
+
+This provides full command-line compatibility with SerpentAI while using
+the modern Nexus Game AI Framework under the hood.
+"""
+
+import sys
+import os
+from pathlib import Path
+
+# Add nexus to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from nexus.cli.main import serpent_compat
+
+if __name__ == "__main__":
+    serpent_compat()

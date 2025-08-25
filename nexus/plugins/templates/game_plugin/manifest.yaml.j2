@@ -1,0 +1,43 @@
+name: {{ name }}
+version: {{ version }}
+author: {{ author }}
+description: {{ description }}
+plugin_type: game
+entry_point: {{ name }}.py
+
+dependencies: []
+python_dependencies:
+  - numpy
+  - opencv-python
+
+min_nexus_version: "0.1.0"
+compatible_platforms:
+  - windows
+  - linux
+  - darwin
+
+files:
+  - path: "{{ name }}.py"
+    pluggable: "GamePlugin"
+  - path: "sprites/"
+    type: "directory"
+  - path: "config.yaml"
+    type: "config"
+
+config_schema:
+  fps:
+    type: integer
+    default: 30
+    description: "Game frames per second"
+  window_name:
+    type: string
+    default: "{{ name }}"
+    description: "Game window name"
+
+default_config:
+  fps: 30
+  window_name: "{{ name }}"
+  
+hooks:
+  post_install: "scripts/install.py"
+  pre_uninstall: "scripts/uninstall.py"

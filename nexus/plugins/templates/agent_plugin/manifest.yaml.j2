@@ -1,0 +1,48 @@
+name: {{ name }}
+version: {{ version }}
+author: {{ author }}
+description: {{ description }}
+plugin_type: agent
+entry_point: {{ name }}.py
+
+dependencies: []
+python_dependencies:
+  - numpy
+  - torch
+
+min_nexus_version: "0.1.0"
+compatible_platforms:
+  - windows
+  - linux
+  - darwin
+
+files:
+  - path: "{{ name }}.py"
+    pluggable: "AgentPlugin"
+  - path: "models/"
+    type: "directory"
+  - path: "config.yaml"
+    type: "config"
+
+config_schema:
+  model_type:
+    type: string
+    default: "dqn"
+    description: "Type of RL model"
+  learning_rate:
+    type: float
+    default: 0.001
+    description: "Learning rate"
+  batch_size:
+    type: integer
+    default: 32
+    description: "Training batch size"
+
+default_config:
+  model_type: "dqn"
+  learning_rate: 0.001
+  batch_size: 32
+  
+hooks:
+  post_install: "scripts/install.py"
+  pre_uninstall: "scripts/uninstall.py"

@@ -1,0 +1,59 @@
+nexus:
+  version: "0.1.0"
+  debug: false
+  auto_reload: true
+  plugin_dirs:
+    - plugins
+    - ~/.nexus/plugins
+
+capture:
+  backend: dxcam
+  device_idx: 0
+  output_idx: null
+  fps: 60
+  buffer_size: 64
+  region: null
+
+vision:
+  detection_model: yolov8
+  ocr_engine: easyocr
+  confidence_threshold: 0.5
+  gpu_enabled: true
+  batch_size: 1
+
+agents:
+  default_type: scripted
+  max_buffer_size: 10000
+  batch_size: 32
+  learning_rate: 0.001
+
+input:
+  backend: pyautogui
+  human_like: true
+  delay_range: [0.05, 0.15]
+  mouse_speed: 1.0
+
+api:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8000
+  cors_enabled: true
+  auth_enabled: false
+
+plugins:
+  auto_discovery: true
+  hot_reload: true
+  sandboxed: false
+
+logging:
+  level: INFO
+  format: json
+  file: nexus.log
+  console: true
+  rotation: "1 day"
+
+performance:
+  max_cpu_percent: 80
+  max_memory_mb: 4096
+  gpu_memory_fraction: 0.5
+  profiling_enabled: false

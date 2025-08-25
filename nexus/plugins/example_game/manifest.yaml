@@ -1,0 +1,8 @@
+name: example_game
+version: 1.0.0
+author: Nexus Team
+description: Example game plugin demonstrating the plugin system
+plugin_type: game
+entry_point: example_game.py
+dependencies: []
+min_nexus_version: "0.1.0"
