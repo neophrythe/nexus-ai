@@ -1,7 +1,7 @@
 # Nexus Game AI Framework
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/neophrythe/nexus-game-ai/main/docs/images/nexus_logo.png" width="500">
+  <img src="https://raw.githubusercontent.com/neophrythe/nexus-ai/main/logo.png" alt="Nexus Game AI Framework" width="500">
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg">
+  <img src="https://img.shields.io/badge/license-AGPL%2FCommercial-red.svg">
   <img src="https://img.shields.io/badge/platform-windows%20%7C%20linux-lightgrey.svg">
   <img src="https://img.shields.io/badge/version-1.0.0-orange.svg">
 </p>
