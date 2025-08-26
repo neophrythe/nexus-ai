@@ -7,7 +7,7 @@
 **Nexus - Game AI Development Framework**  
 *Turn Any Game Into a Self-Playing AI Sandbox*
 
-<a href="https://github.com/neophrythe/nexus-game-ai/wiki">Wiki</a> • 
+<a href="https://github.com/neophrythe/nexus-ai/wiki">Wiki</a> • 
 <a href="https://discord.gg/nexus">Discord</a>
 
 </div>
@@ -378,8 +378,8 @@ See [LICENSE](LICENSE) file for complete terms.
 ## 📞 Support
 
 - **Discord**: [Join our community](https://discord.gg/nexus)
-- **Issues**: [GitHub Issues](https://github.com/neophrythe/nexus-game-ai/issues)
-- **Wiki**: [Documentation Wiki](https://github.com/neophrythe/nexus-game-ai/wiki)
+- **Issues**: [GitHub Issues](https://github.com/neophrythe/nexus-ai/issues)
+- **Wiki**: [Documentation Wiki](https://github.com/neophrythe/nexus-ai/wiki)
 - **Email**: contact@digitalmanufacturinglabs.de
 
 ---
