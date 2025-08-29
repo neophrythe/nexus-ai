@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 
 from nexus.core import PluginManager, ConfigManager, get_logger
-from nexus.capture import CaptureManager, CaptureBackendType
+from nexus.capture import CaptureManager, CaptureBackend
 from nexus.agents.base import BaseAgent
 from nexus.environments.base import GameEnvironment
 
@@ -649,7 +649,7 @@ class NexusAPI:
     
     async def _initialize_capture_manager(self):
         """Initialize capture manager"""
-        backend = CaptureBackendType(self.config.get("capture.backend", "dxcam"))
+        backend = CaptureBackend(self.config.get("capture.backend", "dxcam"))
         self.capture_manager = CaptureManager(
             backend_type=backend,
             device_idx=self.config.get("capture.device_idx", 0),

@@ -11,8 +11,9 @@ from rich.live import Live
 from rich.layout import Layout
 from rich.panel import Panel
 
-from nexus.core import PluginManager, ConfigManager, get_logger, setup_logging
-from nexus.capture import CaptureManager, CaptureBackendType
+from nexus.core import PluginManager, ConfigManager, get_logger
+from nexus.core.logger import setup_logging
+from nexus.capture import CaptureManager, CaptureBackend
 from nexus import __version__
 
 console = Console()
@@ -140,7 +141,7 @@ def capture_test(ctx, duration: int, region: Optional[str]):
     config = ctx.obj['config']
     
     async def test_capture():
-        backend_type = CaptureBackendType(config.get("capture.backend", "dxcam"))
+        backend_type = CaptureBackend(config.get("capture.backend", "dxcam"))
         manager = CaptureManager(backend_type=backend_type)
         
         await manager.initialize()
@@ -183,7 +184,7 @@ def capture_info(ctx):
     config = ctx.obj['config']
     
     async def show_info():
-        backend_type = CaptureBackendType(config.get("capture.backend", "dxcam"))
+        backend_type = CaptureBackend(config.get("capture.backend", "dxcam"))
         manager = CaptureManager(backend_type=backend_type)
         
         await manager.initialize()

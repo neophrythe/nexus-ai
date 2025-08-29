@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional, BinaryIO
 from dataclasses import dataclass, asdict
 import structlog
 
-from nexus.input.controller.gamepad_base import (
+from nexus.input.gamepad.gamepad_base import (
     GamepadBase, Button, Axis, ControllerState, ControllerEvent
 )
 
@@ -535,4 +535,4 @@ class ControllerRecorder:
 
 
 # Import VirtualGamepad for playback support
-from nexus.input.controller.virtual_gamepad import VirtualGamepad
+from nexus.input.gamepad.virtual_gamepad import VirtualGamepad

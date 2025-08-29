@@ -265,7 +265,7 @@ class TestConfigIntegration:
     async def test_config_with_capture_manager(self, config_manager, mock_capture_backend):
         """Test configuration integration with capture manager"""
         from nexus.capture.capture_manager import CaptureManager
-        from nexus.capture.base import CaptureBackendType
+        from nexus.capture.base import CaptureBackend
         
         # Configure capture settings
         config_manager.set("capture.backend", "mss")

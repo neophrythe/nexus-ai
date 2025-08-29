@@ -9,20 +9,20 @@ Provides comprehensive controller support for game AI including:
 - Virtual controller for testing
 """
 
-from nexus.input.controller.gamepad_base import (
+from nexus.input.gamepad.gamepad_base import (
     GamepadBase,
     Button,
     Axis,
     ControllerState,
     ControllerType
 )
-from nexus.input.controller.xbox_controller import XboxController
-from nexus.input.controller.playstation_controller import PlayStationController
-from nexus.input.controller.generic_controller import GenericController
-from nexus.input.controller.virtual_gamepad import VirtualGamepad
-from nexus.input.controller.controller_recorder import ControllerRecorder
-from nexus.input.controller.controller_mapper import ControllerMapper
-from nexus.input.controller.haptic_feedback import HapticFeedback
+from nexus.input.gamepad.xbox_controller import XboxController
+from nexus.input.gamepad.playstation_controller import PlayStationController
+from nexus.input.gamepad.generic_controller import GenericController
+from nexus.input.gamepad.virtual_gamepad import VirtualGamepad
+from nexus.input.gamepad.controller_recorder import ControllerRecorder
+from nexus.input.gamepad.controller_mapper import ControllerMapper
+from nexus.input.gamepad.haptic_feedback import HapticFeedback
 
 __all__ = [
     'GamepadBase',

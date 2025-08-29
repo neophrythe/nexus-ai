@@ -5,7 +5,7 @@ from datetime import datetime
 import psutil
 
 from nexus.capture.base import (
-    CaptureBackend, CaptureBackendType, Frame, FrameBuffer, CaptureError
+    CaptureBackend, Frame, FrameBuffer, CaptureError
 )
 from nexus.capture.dxcam_backend import DXCamBackend
 
@@ -15,11 +15,11 @@ logger = structlog.get_logger()
 class CaptureManager:
     
     BACKEND_CLASSES = {
-        CaptureBackendType.DXCAM: DXCamBackend,
+        CaptureBackend.DXCAM: DXCamBackend,
     }
     
     def __init__(self, 
-                 backend_type: CaptureBackendType = CaptureBackendType.DXCAM,
+                 backend_type: CaptureBackend = CaptureBackend.DXCAM,
                  device_idx: int = 0,
                  output_idx: Optional[int] = None,
                  buffer_size: int = 64):

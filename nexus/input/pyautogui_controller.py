@@ -1,15 +1,14 @@
 import asyncio
 from typing import Optional, Tuple
-import pyautogui
 import structlog
 
 from nexus.input.base import InputController, InputAction, MouseButton
+from nexus.utils.x11_helper import setup_x11_environment, is_gui_available
 
 logger = structlog.get_logger()
 
-# Configure PyAutoGUI
-pyautogui.FAILSAFE = False
-pyautogui.PAUSE = 0
+# Lazy import pyautogui to avoid X11 issues during import
+pyautogui = None
 
 
 class PyAutoGUIController(InputController):
@@ -17,17 +16,38 @@ class PyAutoGUIController(InputController):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._initialized = False
+        self._gui_available = False
         
     async def initialize(self) -> None:
         """Initialize PyAutoGUI controller"""
+        global pyautogui
+        
+        # Setup X11 environment if needed
+        self._gui_available = setup_x11_environment()
+        
+        if not self._gui_available:
+            logger.warning("GUI not available - PyAutoGUI will run in headless mode")
+            # Could implement a mock or alternative here
+            self._initialized = True
+            return
+        
         try:
+            # Import pyautogui only when needed and after X11 setup
+            import pyautogui as _pyautogui
+            pyautogui = _pyautogui
+            
+            # Configure PyAutoGUI
+            pyautogui.FAILSAFE = False
+            pyautogui.PAUSE = 0
+            
             # Test PyAutoGUI
             pyautogui.size()
             self._initialized = True
-            logger.info("PyAutoGUI controller initialized")
+            logger.info("PyAutoGUI controller initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize PyAutoGUI: {e}")
-            raise
+            # Don't raise - allow degraded operation
+            self._initialized = True
     
     async def key_press(self, key: str) -> None:
         """Press a key"""

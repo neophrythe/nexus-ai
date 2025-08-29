@@ -6,7 +6,7 @@ import numpy as np
 import time
 from unittest.mock import Mock, patch, AsyncMock
 
-from nexus.capture.base import CaptureBackend, CaptureBackendType
+from nexus.capture.base import CaptureBackend, CaptureBackend
 from nexus.capture.capture_manager import CaptureManager
 from nexus.capture.frame_grabber import FrameGrabber, RedisFrameBuffer
 from nexus.vision.frame_processing import GameFrame
@@ -70,12 +70,12 @@ class TestCaptureManager:
     async def test_capture_manager_creation(self, config_manager):
         """Test creating capture manager"""
         manager = CaptureManager(
-            backend_type=CaptureBackendType.MSS,
+            backend_type=CaptureBackend.MSS,
             device_idx=0,
             buffer_size=32
         )
         
-        assert manager.backend_type == CaptureBackendType.MSS
+        assert manager.backend_type == CaptureBackend.MSS
         assert manager.device_idx == 0
         assert manager.buffer_size == 32
         assert not manager.initialized
@@ -88,7 +88,7 @@ class TestCaptureManager:
             mock_create.return_value = mock_capture_backend
             
             manager = CaptureManager(
-                backend_type=CaptureBackendType.MSS,
+                backend_type=CaptureBackend.MSS,
                 buffer_size=16
             )
             
@@ -111,7 +111,7 @@ class TestCaptureManager:
             mock_create.return_value = mock_capture_backend
             
             manager = CaptureManager(
-                backend_type=CaptureBackendType.MSS,
+                backend_type=CaptureBackend.MSS,
                 buffer_size=16
             )
             await manager.initialize()
@@ -385,15 +385,15 @@ class TestCaptureBackendSelection:
     
     async def test_backend_type_enum(self):
         """Test capture backend type enumeration"""
-        assert CaptureBackendType.DXCAM.value == "dxcam"
-        assert CaptureBackendType.MSS.value == "mss"
+        assert CaptureBackend.DXCAM.value == "dxcam"
+        assert CaptureBackend.MSS.value == "mss"
     
     async def test_backend_switching(self, config_manager):
         """Test switching between capture backends"""
         # This test would need real backends to be meaningful
         # For now, we'll test the enum and basic structure
         
-        backend_types = [CaptureBackendType.MSS, CaptureBackendType.DXCAM]
+        backend_types = [CaptureBackend.MSS, CaptureBackend.DXCAM]
         
         for backend_type in backend_types:
             manager = CaptureManager(

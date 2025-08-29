@@ -11,7 +11,7 @@ import struct
 from typing import Optional, Tuple
 import structlog
 
-from nexus.input.controller.gamepad_base import (
+from nexus.input.gamepad.gamepad_base import (
     GamepadBase, Button, Axis, ControllerState, ControllerType
 )
 

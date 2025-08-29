@@ -7,12 +7,12 @@ Provides advanced haptic feedback patterns and effects for game controllers.
 import time
 import threading
 import math
-from typing import Dict, List, Optional, Callable, Tuple
+from typing import Dict, List, Optional, Callable, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
 import structlog
 
-from nexus.input.controller.gamepad_base import GamepadBase
+from nexus.input.gamepad.gamepad_base import GamepadBase
 
 logger = structlog.get_logger()
 

@@ -14,7 +14,7 @@ import time
 import numpy as np
 
 from nexus import __version__
-from nexus.core import NexusCore
+# from nexus.core import NexusCore  # TODO: NexusCore class not implemented yet
 from nexus.plugins import EnhancedPluginManager
 from nexus.launchers.game_launcher import GameLauncherFactory, LaunchConfig, LauncherType
 from nexus.analytics.experiment_tracker import init_tracker
@@ -1238,18 +1238,83 @@ def gui():
     """Launch the Nexus GUI (similar to SerpentAI's visual interface)"""
     click.echo("Launching Nexus GUI...")
     
+    # Setup environment for WSL2
+    import os
+    import platform
+    
+    # Detect if we're on WSL2
+    is_wsl2 = False
     try:
-        from nexus.gui.main_window import main
-        main()
+        with open("/proc/version", "r") as f:
+            if "microsoft" in f.read().lower():
+                is_wsl2 = True
+    except:
+        pass
+    
+    if is_wsl2:
+        # Set up X11 display for WSL2
+        if not os.environ.get('DISPLAY'):
+            try:
+                with open("/etc/resolv.conf", "r") as f:
+                    for line in f:
+                        if "nameserver" in line:
+                            ip = line.split()[1]
+                            os.environ['DISPLAY'] = f"{ip}:0"
+                            click.echo(f"WSL2 detected - setting DISPLAY={os.environ['DISPLAY']}")
+                            break
+            except:
+                click.echo("Warning: Could not auto-detect WSL2 display. Set DISPLAY manually.")
+        
+        # Set Qt environment for WSL2
+        os.environ['QT_XCB_GL_INTEGRATION'] = 'none'
+        os.environ['QT_QUICK_BACKEND'] = 'software'
+        os.environ.setdefault('XDG_RUNTIME_DIR', f'/tmp/runtime-{os.getuid()}')
+        
+        # Create runtime dir if needed
+        runtime_dir = os.environ['XDG_RUNTIME_DIR']
+        if not os.path.exists(runtime_dir):
+            os.makedirs(runtime_dir, mode=0o700, exist_ok=True)
+    
+    try:
+        # Try to import from visual_debugger first
+        from nexus.gui.visual_debugger import VisualDebugger
+        debugger = VisualDebugger()
+        
+        # For PyQt5, we need to run the Qt application
+        if hasattr(debugger, 'app'):
+            import sys
+            from PyQt5.QtWidgets import QApplication
+            app = QApplication.instance() or QApplication(sys.argv)
+            debugger.window.show()
+            sys.exit(app.exec_())
+        else:
+            debugger.run()
+            
     except ImportError as e:
-        click.echo(f"✗ GUI dependencies not installed: {e}", err=True)
-        click.echo("\nTo use the GUI, install PyQt5:")
-        click.echo("  pip install PyQt5")
-        click.echo("\nAlternatively, use the web-based visual debugger:")
-        click.echo("  nexus visual-debugger")
-        sys.exit(1)
+        # Fallback to main_window if it exists
+        try:
+            from nexus.gui.main_window import main
+            main()
+        except ImportError:
+            click.echo(f"✗ GUI dependencies not installed: {e}", err=True)
+            click.echo("\nTo use the GUI, install PyQt5:")
+            click.echo("  pip install PyQt5")
+            
+            if is_wsl2:
+                click.echo("\nFor WSL2, also ensure:")
+                click.echo("  1. X server is running on Windows (VcXsrv or X410)")
+                click.echo("  2. Run: ./setup_gui_wsl2.sh")
+                click.echo("  3. DISPLAY is set correctly")
+            
+            click.echo("\nAlternatively, use the web-based visual debugger:")
+            click.echo("  nexus visual-debugger")
+            sys.exit(1)
     except Exception as e:
         click.echo(f"✗ Failed to launch GUI: {e}", err=True)
+        if "xcb" in str(e).lower():
+            click.echo("\nQt platform plugin error detected!")
+            click.echo("For WSL2, run: ./setup_gui_wsl2.sh")
+            click.echo("Make sure X server is running on Windows")
         sys.exit(1)
 
 
@@ -1276,14 +1341,14 @@ def interactive():
     
     # Add convenience imports
     try:
-        from nexus.core import NexusCore
+        # from nexus.core import NexusCore  # TODO: NexusCore class not implemented yet
         from nexus.window.window_controller import WindowController
         from nexus.api.game_api import GameAPIFactory
         from nexus.agents import create_agent
         from nexus.plugins import EnhancedPluginManager
         
         namespace.update({
-            'NexusCore': NexusCore,
+            # 'NexusCore': NexusCore,  # TODO: NexusCore class not implemented yet
             'WindowController': WindowController,
             'GameAPIFactory': GameAPIFactory,
             'create_agent': create_agent,
@@ -1319,6 +1384,21 @@ def main():
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
+
+class NexusCLI:
+    """Wrapper class for Nexus CLI"""
+    
+    def __init__(self):
+        pass
+    
+    def run(self):
+        """Run the CLI"""
+        try:
+            cli(obj={})
+        except Exception as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

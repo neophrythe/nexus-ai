@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any, Callable
 import numpy as np
 import structlog
 
-from nexus.input.controller.gamepad_base import (
+from nexus.input.gamepad.gamepad_base import (
     GamepadBase, Button, Axis, ControllerState, ControllerType, ControllerEvent
 )
 

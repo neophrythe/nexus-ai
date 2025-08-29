@@ -9,7 +9,7 @@ import structlog
 from abc import ABC, abstractmethod
 import itertools
 
-from nexus.input.input_controller import InputController
+from nexus.input.controller import InputController
 from nexus.capture.screen_capture import ScreenCapture
 from nexus.window.window_controller import WindowController
 from nexus.launchers.game_launcher import GameLauncherFactory, LaunchConfig

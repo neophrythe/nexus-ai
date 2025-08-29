@@ -1,6 +1,0 @@
-Collecting evdev-binary
-  Downloading evdev_binary-1.9.2-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl.metadata (3.7 kB)
-Downloading evdev_binary-1.9.2-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl (111 kB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 111.3/111.3 kB 3.0 MB/s eta 0:00:00
-Installing collected packages: evdev-binary
-Successfully installed evdev-binary-1.9.2

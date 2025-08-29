@@ -5,12 +5,12 @@ from typing import Optional, Tuple, List, Any
 import numpy as np
 import structlog
 
-from nexus.capture.base import CaptureBackend, Frame, CaptureError
+from nexus.capture.base import CaptureBackendBase, Frame, CaptureError
 
 logger = structlog.get_logger()
 
 
-class DXCamBackend(CaptureBackend):
+class DXCamBackend(CaptureBackendBase):
     
     def __init__(self, device_idx: int = 0, output_idx: Optional[int] = None):
         super().__init__(device_idx, output_idx)

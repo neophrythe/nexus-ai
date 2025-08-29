@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Any, Dict
 import numpy as np
 
 
-class CaptureBackendType(Enum):
+class CaptureBackend(Enum):
     DXCAM = "dxcam"
     MSS = "mss"
     WINDOWS_GRAPHICS = "windows_graphics"
@@ -58,7 +58,7 @@ class Frame:
         return rgb[:, :, ::-1]
 
 
-class CaptureBackend(ABC):
+class CaptureBackendBase(ABC):
     
     def __init__(self, device_idx: int = 0, output_idx: Optional[int] = None):
         self.device_idx = device_idx

@@ -40,11 +40,68 @@ Built as a spiritual successor to SerpentAI, Nexus maintains full compatibility 
 
 ### Prerequisites
 
-- Python 3.10 or higher
-- Windows 10/11 or Linux (Ubuntu 20.04+)
-- NVIDIA GPU recommended (CUDA support for deep learning)
+- Python 3.8 or higher
+- Windows 10/11, Linux (Ubuntu 20.04+), or WSL2
+- **NVIDIA GPU required for AI training** (CUDA 11.8+ support)
+- At least 8GB RAM (16GB+ recommended)
+
+### Supported Platforms
+
+| Platform | GUI Support | CUDA Support | Recommended |
+|----------|------------|--------------|-------------|
+| Windows 10/11 | ✅ Native | ✅ Full | ✅ Yes |
+| Linux | ✅ X11 | ✅ Full | ✅ Yes |
+| WSL2 | ✅ X11 Forward | ✅ Full | ✅ Yes |
+| macOS | ❌ | ❌ No CUDA | ❌ Not Supported |
 
 ### Quick Install
+
+```bash
+# Clone the repository
+git clone https://github.com/neophrythe/nexus-ai.git
+cd nexus-ai
+
+# Run the universal installer (auto-detects your platform)
+python install.py
+
+# Activate the environment
+# Windows:
+.\venv\Scripts\activate
+# Linux/WSL2:
+source venv/bin/activate
+
+# Test the installation
+nexus --help
+nexus doctor
+```
+
+### Platform-Specific Notes
+
+#### 🪟 Windows
+- Works out of the box
+- Native GUI support
+- Full CUDA acceleration
+- Best performance for gaming
+
+#### 🐧 Linux
+- GUI requires X11 (usually pre-installed)
+- Full CUDA support
+- Ideal for training servers
+
+#### 🔧 WSL2 (Windows Subsystem for Linux)
+Special GUI support included! The installer:
+- Auto-detects WSL2
+- Installs all required Qt dependencies
+- Creates display setup scripts
+- Provides evdev compatibility layer
+
+**For WSL2 GUI:**
+1. Install VcXsrv on Windows (free) or X410 (paid)
+2. Run X server with "Disable access control" checked
+3. Run `source setup_wsl2_display.sh` (created by installer)
+4. Run `nexus gui`
+
+### Manual Installation
 
 ```bash
 # Clone the repository

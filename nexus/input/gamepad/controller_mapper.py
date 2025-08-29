@@ -6,11 +6,11 @@ Provides button remapping, profile management, and input transformation.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, field
 import structlog
 
-from nexus.input.controller.gamepad_base import (
+from nexus.input.gamepad.gamepad_base import (
     GamepadBase, Button, Axis, ControllerState, ControllerEvent
 )
 

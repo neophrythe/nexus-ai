@@ -1,6 +1,17 @@
 from nexus.input.base import InputController as BaseInputController, InputAction, InputType
-from nexus.input.pyautogui_controller import PyAutoGUIController
-from nexus.input.native_controller import NativeInputController
+
+# Lazy import controllers to avoid X11 issues at import time
+def _get_pyautogui_controller():
+    from nexus.input.pyautogui_controller import PyAutoGUIController
+    return PyAutoGUIController
+
+def _get_native_controller():
+    from nexus.input.native_controller import NativeInputController
+    return NativeInputController
+
+# For backward compatibility
+PyAutoGUIController = _get_pyautogui_controller
+NativeInputController = _get_native_controller
 from nexus.input.human_like import HumanLikeInput
 
 # New Input Recording/Playback System

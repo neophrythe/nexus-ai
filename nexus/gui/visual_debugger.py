@@ -16,6 +16,25 @@ import cv2
 from collections import deque
 
 
+class VisualDebugger:
+    """Main Visual Debugger class - delegates to appropriate implementation"""
+    
+    def __init__(self, config=None):
+        self.config = config or {}
+        if PYQT_AVAILABLE:
+            self.window = VisualDebuggerWindow(config)
+        else:
+            raise ImportError("PyQt5 not available. Install with: pip install PyQt5")
+    
+    def show(self):
+        if hasattr(self.window, 'show'):
+            self.window.show()
+    
+    def run(self):
+        if hasattr(self.window, 'run'):
+            self.window.run()
+
+
 class VisualDebuggerWindow(QMainWindow if PYQT_AVAILABLE else object):
     """Advanced visual debugger for game analysis."""
     

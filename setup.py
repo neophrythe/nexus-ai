@@ -43,7 +43,9 @@ def get_platform_type():
     elif platform.system() == "Linux":
         return "linux"
     elif platform.system() == "Darwin":
-        return "macos"
+        # macOS not supported due to lack of CUDA
+        print("Warning: macOS detected but not supported (no CUDA support)")
+        return "unsupported"
     else:
         return "unknown"
 

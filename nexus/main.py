@@ -15,7 +15,7 @@ import structlog
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from nexus.core import PluginManager, ConfigManager, setup_logging, get_logger
-from nexus.capture import CaptureManager, CaptureBackendType
+from nexus.capture import CaptureManager, CaptureBackend
 from nexus.vision import VisionPipeline
 from nexus.agents import BaseAgent, AgentType
 from nexus.environments import GameEnvironment
@@ -61,7 +61,7 @@ class NexusRunner:
         await self.plugin_manager.discover_plugins()
         
         # Initialize capture manager
-        backend_type = CaptureBackendType(self.config.get("capture.backend", "dxcam"))
+        backend_type = CaptureBackend(self.config.get("capture.backend", "dxcam"))
         self.capture_manager = CaptureManager(
             backend_type=backend_type,
             device_idx=self.config.get("capture.device_idx", 0),
