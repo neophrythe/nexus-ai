@@ -11,7 +11,7 @@ import toml
 import importlib
 import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Type, Any, Callable
+from typing import Dict, List, Optional, Type, Any, Callable, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 import hashlib

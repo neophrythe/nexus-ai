@@ -1,0 +1,80 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Python files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build files
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Data files (keep structure, exclude content)
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+models/*
+!models/.gitkeep
+recordings/*
+!recordings/.gitkeep
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker files
+docker-compose.override.yml
+.env.local
+
+# Node modules (if any frontend)
+node_modules/
+
+# Large files
+*.weights
+*.h5
+*.pkl
+*.pth
+*.onnx
+*.safetensors

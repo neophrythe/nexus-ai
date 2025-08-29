@@ -1,0 +1,34 @@
+# Minimal requirements for lightweight deployment
+# Core functionality only
+
+# Essential dependencies
+numpy>=1.24.0
+opencv-python-headless>=4.8.0  # Headless version for containers
+Pillow>=10.0.0
+
+# Configuration
+pyyaml>=6.0
+toml>=0.10.2
+
+# Web API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Logging
+structlog>=23.2.0
+
+# Basic ML
+torch>=2.0.0  # CPU version
+gymnasium>=0.29.0
+
+# CLI
+click>=8.1.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Async
+aiofiles>=23.2.0
+
+# Monitoring (minimal)
+psutil>=5.9.0

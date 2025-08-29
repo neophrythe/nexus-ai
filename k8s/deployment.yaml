@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-ai
+  namespace: nexus
+  labels:
+    app: nexus-ai
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nexus-ai
+  template:
+    metadata:
+      labels:
+        app: nexus-ai
+        version: v1.0.0
+    spec:
+      containers:
+      - name: nexus
+        image: nexus-ai:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: api
+        - containerPort: 8081
+          name: websocket
+        - containerPort: 8082
+          name: metrics
+        env:
+        - name: NEXUS_ENV
+          value: "production"
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nexus-secrets
+              key: database-url
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: models
+          mountPath: /app/models
+        - name: config
+          mountPath: /app/configs
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: nexus-data-pvc
+      - name: models
+        persistentVolumeClaim:
+          claimName: nexus-models-pvc
+      - name: config
+        configMap:
+          name: nexus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-service
+  namespace: nexus
+  labels:
+    app: nexus-ai
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: api
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: websocket
+  - port: 9090
+    targetPort: 8082
+    protocol: TCP
+    name: metrics
+  selector:
+    app: nexus-ai
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexus-hpa
+  namespace: nexus
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nexus-ai
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-config
+  namespace: nexus
+data:
+  nexus.yaml: |
+    api:
+      host: 0.0.0.0
+      port: 8080
+      workers: 4
+    
+    redis:
+      host: redis-service
+      port: 6379
+      db: 0
+    
+    logging:
+      level: INFO
+      format: json
+    
+    metrics:
+      enabled: true
+      port: 8082
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nexus-secrets
+  namespace: nexus
+type: Opaque
+data:
+  database-url: cG9zdGdyZXNxbDovL25leHVzOm5leHVzMTIzQHBvc3RncmVzOjU0MzIvbmV4dXM=  # base64 encoded
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nexus-data-pvc
+  namespace: nexus
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nexus-models-pvc
+  namespace: nexus
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard

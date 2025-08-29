@@ -28,6 +28,8 @@ class ScriptedAgent(BaseAgent):
     """Rule-based scripted agent"""
     
     def __init__(self, *args, **kwargs):
+        # Remove agent_type from kwargs if it exists to avoid duplicate
+        kwargs.pop('agent_type', None)
         super().__init__(*args, agent_type=AgentType.SCRIPTED, **kwargs)
         self.rules: List[Rule] = []
         self.default_action = None
@@ -135,6 +137,17 @@ class ScriptedAgent(BaseAgent):
             if rule.name == name:
                 rule.enabled = False
                 break
+    
+    def predict(self, observation: Any) -> Any:
+        """Synchronous predict method for compatibility."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If we're already in an async context, can't use run_until_complete
+            import random
+            return random.randint(0, self.action_space - 1) if hasattr(self, 'action_space') else 0
+        else:
+            return loop.run_until_complete(self.act(observation))
     
     async def act(self, observation: Any) -> Any:
         """Select action based on rules"""

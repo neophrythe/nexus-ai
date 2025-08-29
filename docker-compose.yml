@@ -1,0 +1,225 @@
+version: '3.8'
+
+services:
+  # Main Nexus AI service
+  nexus:
+    build:
+      context: .
+      target: production
+    container_name: nexus-ai
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # API
+      - "8081:8081"  # WebSocket
+      - "8082:8082"  # Metrics
+    environment:
+      - NEXUS_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://nexus:nexus123@postgres:5432/nexus
+      - DISPLAY=:99
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./recordings:/app/recordings
+      - ./configs:/app/configs
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - nexus-network
+
+  # Nexus with GUI support (VNC access)
+  nexus-gui:
+    build:
+      context: .
+      target: development
+    container_name: nexus-gui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # API
+      - "5900:5900"  # VNC
+      - "6080:6080"  # noVNC (web-based VNC)
+    environment:
+      - NEXUS_ENV=development
+      - DISPLAY=:99
+      - REDIS_HOST=redis
+      - VNC_PASSWORD=nexus123
+    volumes:
+      - ./:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/dri:/dev/dri  # GPU acceleration
+    depends_on:
+      - redis
+    networks:
+      - nexus-network
+    command: |
+      bash -c "
+        Xvfb :99 -screen 0 1920x1080x24 &
+        x11vnc -display :99 -forever -usepw -create &
+        websockify --web=/usr/share/novnc/ 6080 localhost:5900 &
+        nexus gui
+      "
+
+  # Nexus with GPU support
+  nexus-gpu:
+    build:
+      context: .
+      target: gpu
+    container_name: nexus-gpu
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "8083:8080"  # API on different port
+    environment:
+      - NEXUS_ENV=production
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - REDIS_HOST=redis
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    depends_on:
+      - redis
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Redis for caching and message queue
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - nexus-network
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=nexus
+      - POSTGRES_PASSWORD=nexus123
+      - POSTGRES_DB=nexus
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nexus-network
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nexus-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=nexus123
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - nexus-network
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nexus-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - nexus-network
+
+  # Jupyter for interactive development
+  jupyter:
+    build:
+      context: .
+      target: development
+    container_name: nexus-jupyter
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - ./:/app
+      - jupyter-data:/home/jovyan
+    command: jupyter lab --ip=0.0.0.0 --allow-root --NotebookApp.token='nexus123'
+    networks:
+      - nexus-network
+
+  # MinIO for S3-compatible object storage
+  minio:
+    image: minio/minio:latest
+    container_name: nexus-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=nexus
+      - MINIO_ROOT_PASSWORD=nexus123456
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - nexus-network
+
+  # Android emulator support
+  android-emulator:
+    image: budtmo/docker-android:emulator_11.0
+    container_name: nexus-android
+    restart: unless-stopped
+    ports:
+      - "6080:6080"  # noVNC
+      - "5554:5554"  # ADB
+      - "5555:5555"  # ADB
+    environment:
+      - DEVICE=Samsung Galaxy S10
+      - DATAPARTITION=4096
+    privileged: true
+    volumes:
+      - android-data:/data
+    networks:
+      - nexus-network
+
+volumes:
+  redis-data:
+  postgres-data:
+  grafana-data:
+  prometheus-data:
+  jupyter-data:
+  minio-data:
+  android-data:
+
+networks:
+  nexus-network:
+    driver: bridge

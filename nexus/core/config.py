@@ -40,6 +40,9 @@ class ConfigFileHandler(FileSystemEventHandler):
             self.config_manager.reload()
 
 
+# Alias for backward compatibility
+Config = ConfigSchema
+
 class ConfigManager:
     
     DEFAULT_CONFIG = {
@@ -422,6 +425,34 @@ class ProfileManager:
         config = ConfigManager(profile_path)
         self.current_profile = name
         logger.info(f"Loaded profile: {name}")
+        return config
+    
+    @staticmethod
+    def load_config(base_path: str = None, override_path: str = None) -> ConfigSchema:
+        """Load configuration from files with override support."""
+        config = ConfigSchema()
+        
+        # Load base config if provided
+        if base_path and Path(base_path).exists():
+            with open(base_path, 'r') as f:
+                base_data = yaml.safe_load(f)
+                for key, value in base_data.items():
+                    setattr(config, key, value)
+        
+        # Apply overrides if provided
+        if override_path and Path(override_path).exists():
+            with open(override_path, 'r') as f:
+                override_data = yaml.safe_load(f)
+                for key, value in override_data.items():
+                    if hasattr(config, key):
+                        # Merge dictionaries
+                        if isinstance(getattr(config, key), dict):
+                            getattr(config, key).update(value)
+                        else:
+                            setattr(config, key, value)
+                    else:
+                        setattr(config, key, value)
+        
         return config
     
     def delete_profile(self, name: str) -> None:

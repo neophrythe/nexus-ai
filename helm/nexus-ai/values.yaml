@@ -1,0 +1,180 @@
+# Default values for nexus-ai Helm chart
+
+replicaCount: 3
+
+image:
+  repository: nexus-ai
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8082"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+  hosts:
+    - host: nexus.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: nexus-tls
+      hosts:
+        - nexus.example.com
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+persistence:
+  data:
+    enabled: true
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+  models:
+    enabled: true
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 50Gi
+
+# GPU support
+gpu:
+  enabled: false
+  type: "nvidia.com/gpu"
+  count: 1
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "nexus123"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# PostgreSQL configuration  
+postgresql:
+  enabled: true
+  auth:
+    username: nexus
+    password: nexus123
+    database: nexus
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+# Prometheus configuration
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: true
+  pushgateway:
+    enabled: false
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: nexus123
+  persistence:
+    enabled: true
+    size: 1Gi
+
+# Environment variables
+env:
+  - name: NEXUS_ENV
+    value: "production"
+  - name: LOG_LEVEL
+    value: "INFO"
+  - name: WORKERS
+    value: "4"
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - nexus-ai
+          topologyKey: kubernetes.io/hostname

@@ -4,11 +4,14 @@ import click
 import sys
 import json
 import yaml
+import subprocess
+import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import structlog
 from tabulate import tabulate
 import time
+import numpy as np
 
 from nexus import __version__
 from nexus.core import NexusCore
@@ -51,10 +54,141 @@ def cli(ctx, config, verbose):
         click.echo(f"Nexus Framework v{__version__}")
 
 
+@cli.command()
+@click.option('--force', '-f', is_flag=True, help='Force reinstall')
+@click.option('--dev', is_flag=True, help='Install in development mode')
+def setup(force, dev):
+    """Initial setup of Nexus Framework"""
+    click.echo("Setting up Nexus Framework...")
+    
+    # Create directories
+    nexus_dir = Path.home() / ".nexus"
+    dirs_to_create = [
+        nexus_dir,
+        nexus_dir / "plugins",
+        nexus_dir / "games",
+        nexus_dir / "agents",
+        nexus_dir / "datasets",
+        nexus_dir / "configs",
+        nexus_dir / "logs"
+    ]
+    
+    for directory in dirs_to_create:
+        directory.mkdir(parents=True, exist_ok=True)
+        click.echo(f"✓ Created {directory}")
+    
+    # Create default configuration
+    default_config = {
+        "version": __version__,
+        "paths": {
+            "plugins": str(nexus_dir / "plugins"),
+            "games": str(nexus_dir / "games"),
+            "agents": str(nexus_dir / "agents"),
+            "datasets": str(nexus_dir / "datasets"),
+            "logs": str(nexus_dir / "logs")
+        },
+        "logging": {
+            "level": "INFO",
+            "format": "json"
+        },
+        "performance": {
+            "max_cpu_percent": 80,
+            "max_memory_mb": 2048
+        }
+    }
+    
+    config_file = nexus_dir / "config.yaml"
+    if not config_file.exists() or force:
+        with open(config_file, 'w') as f:
+            yaml.dump(default_config, f, default_flow_style=False)
+        click.echo(f"✓ Created configuration file: {config_file}")
+    
+    # Install dependencies if in dev mode
+    if dev:
+        click.echo("Installing development dependencies...")
+        import subprocess
+        subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True)
+        click.echo("✓ Installed in development mode")
+    
+    click.echo("\n✓ Setup complete! Run 'nexus doctor' to verify installation.")
+
+
+@cli.command()
+@click.option('--show', '-s', is_flag=True, help='Show current configuration')
+@click.option('--edit', '-e', is_flag=True, help='Edit configuration in editor')
+@click.option('--get', '-g', help='Get a specific configuration value')
+@click.option('--set', help='Set a configuration value (key=value)')
+def config(show, edit, get, set):
+    """Manage Nexus configuration"""
+    config_file = Path.home() / ".nexus" / "config.yaml"
+    
+    if not config_file.exists():
+        click.echo("Configuration not found. Run 'nexus setup' first.", err=True)
+        sys.exit(1)
+    
+    # Load config
+    with open(config_file) as f:
+        config_data = yaml.safe_load(f)
+    
+    if show:
+        click.echo(yaml.dump(config_data, default_flow_style=False))
+    
+    elif edit:
+        import os
+        editor = os.environ.get('EDITOR', 'nano')
+        subprocess.run([editor, str(config_file)])
+        click.echo("✓ Configuration updated")
+    
+    elif get:
+        # Navigate through nested keys
+        keys = get.split('.')
+        value = config_data
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                click.echo(f"Key not found: {get}", err=True)
+                sys.exit(1)
+        click.echo(value)
+    
+    elif set:
+        # Parse key=value
+        if '=' not in set:
+            click.echo("Invalid format. Use: --set key=value", err=True)
+            sys.exit(1)
+        
+        key_path, value = set.split('=', 1)
+        keys = key_path.split('.')
+        
+        # Navigate to parent and set value
+        current = config_data
+        for key in keys[:-1]:
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+        
+        # Convert value to appropriate type
+        try:
+            value = json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            pass  # Keep as string
+        
+        current[keys[-1]] = value
+        
+        # Save config
+        with open(config_file, 'w') as f:
+            yaml.dump(config_data, f, default_flow_style=False)
+        
+        click.echo(f"✓ Set {key_path} = {value}")
+    
+    else:
+        click.echo("Use --show, --edit, --get, or --set")
+
+
 @cli.group()
 def game():
     """Game management commands"""
-    click.echo("Game management commands available:")
+    pass
 
 
 @game.command()
@@ -94,6 +228,82 @@ def launch(ctx, game_name, launcher, path, app_id, url, window_name, args):
     except Exception as e:
         click.echo(f"✗ Failed to launch game: {e}", err=True)
         sys.exit(1)
+
+
+@game.command('list')
+def list_games():
+    """List all registered games"""
+    games_dir = Path.home() / ".nexus" / "games"
+    games_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Load games registry
+    registry_file = games_dir / "registry.json"
+    if not registry_file.exists():
+        click.echo("No games registered. Use 'nexus game register' to add games.")
+        return
+    
+    with open(registry_file) as f:
+        games = json.load(f)
+    
+    if not games:
+        click.echo("No games registered.")
+        return
+    
+    # Format as table
+    table_data = []
+    for name, info in games.items():
+        table_data.append([
+            name,
+            info.get('type', 'executable'),
+            info.get('path', 'N/A')[:50],
+            info.get('window_name', 'N/A'),
+            "✓" if info.get('installed', False) else "✗"
+        ])
+    
+    headers = ["Game", "Type", "Path", "Window", "Installed"]
+    click.echo(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+
+@game.command('register')
+@click.argument('game_name')
+@click.option('--path', '-p', help='Game executable path or package name for Android')
+@click.option('--window-name', '-w', help='Window name pattern')
+@click.option('--type', '-t', type=click.Choice(['steam', 'executable', 'epic', 'web', 'android']), default='executable')
+@click.option('--package', help='Android package name (for BlueStacks/emulators)')
+def register_game(game_name, path, window_name, type, package):
+    """Register a game for use with Nexus"""
+    games_dir = Path.home() / ".nexus" / "games"
+    games_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Load existing registry
+    registry_file = games_dir / "registry.json"
+    games = {}
+    if registry_file.exists():
+        with open(registry_file) as f:
+            games = json.load(f)
+    
+    # Add new game
+    if type == 'android':
+        games[game_name] = {
+            'type': type,
+            'package': package or path,  # Package name
+            'window_name': window_name or 'BlueStacks',
+            'installed': True,
+            'emulator': 'bluestacks'
+        }
+    else:
+        games[game_name] = {
+            'type': type,
+            'path': path,
+            'window_name': window_name or game_name,
+            'installed': Path(path).exists() if type == 'executable' else True
+        }
+    
+    # Save registry
+    with open(registry_file, 'w') as f:
+        json.dump(games, f, indent=2)
+    
+    click.echo(f"✓ Registered game: {game_name}")
 
 
 @game.command()
@@ -563,7 +773,7 @@ def doctor():
             checks.append(("CUDA", f"✓ Available ({torch.cuda.get_device_name(0)})", True))
         else:
             checks.append(("CUDA", "Not available", False))
-    except:
+    except Exception:
         checks.append(("CUDA", "Cannot check", False))
     
     # Check window controller
@@ -587,6 +797,460 @@ def doctor():
         click.echo("\n✓ All checks passed! Nexus is ready to use.")
     else:
         click.echo("\n⚠ Some checks failed. Install missing dependencies for full functionality.")
+
+
+@cli.group()
+def bluestacks():
+    """BlueStacks Android emulator commands"""
+    pass
+
+
+@bluestacks.command('connect')
+@click.option('--port', '-p', default=5555, help='ADB port')
+def bluestacks_connect(port):
+    """Connect to BlueStacks emulator"""
+    from nexus.emulators.bluestacks import BlueStacksController, BlueStacksConfig
+    
+    config = BlueStacksConfig(adb_port=port)
+    controller = BlueStacksController(config)
+    
+    if controller.adb_connected:
+        click.echo(f"✓ Connected to BlueStacks on port {port}")
+        
+        # Show device info
+        state = controller.get_game_state()
+        click.echo(f"Device state: {'Running' if state['running'] else 'Not running'}")
+        
+        # List some installed games
+        apps = controller.get_installed_apps()
+        game_apps = [app for app in apps if any(keyword in app.lower() 
+                     for keyword in ['game', 'play', 'clash', 'candy', 'pubg', 'cod'])]
+        
+        if game_apps:
+            click.echo(f"\nDetected games:")
+            for app in game_apps[:10]:
+                click.echo(f"  - {app}")
+    else:
+        click.echo(f"✗ Failed to connect to BlueStacks", err=True)
+
+
+@bluestacks.command('launch')
+@click.argument('package_name')
+def bluestacks_launch(package_name):
+    """Launch Android game in BlueStacks"""
+    from nexus.emulators.bluestacks import BlueStacksController
+    
+    controller = BlueStacksController()
+    
+    if not controller.adb_connected:
+        click.echo("✗ Not connected to BlueStacks. Run 'nexus bluestacks connect' first", err=True)
+        return
+    
+    click.echo(f"Launching {package_name}...")
+    
+    if controller.launch_app(package_name):
+        click.echo(f"✓ Game launched successfully")
+        
+        # Wait for UI to load
+        time.sleep(3)
+        
+        # Take screenshot
+        screenshot = controller.get_screenshot()
+        if screenshot is not None:
+            click.echo(f"✓ Game is running (screenshot captured)")
+    else:
+        click.echo(f"✗ Failed to launch game", err=True)
+
+
+@bluestacks.command('control')
+@click.argument('action', type=click.Choice(['tap', 'swipe', 'text', 'back', 'home']))
+@click.argument('params', nargs=-1)
+def bluestacks_control(action, params):
+    """Control BlueStacks game"""
+    from nexus.emulators.bluestacks import BlueStacksController
+    
+    controller = BlueStacksController()
+    
+    if not controller.adb_connected:
+        click.echo("✗ Not connected to BlueStacks", err=True)
+        return
+    
+    if action == 'tap':
+        if len(params) >= 2:
+            x, y = int(params[0]), int(params[1])
+            if controller.tap(x, y):
+                click.echo(f"✓ Tapped at ({x}, {y})")
+        else:
+            click.echo("Usage: nexus bluestacks control tap X Y", err=True)
+    
+    elif action == 'swipe':
+        if len(params) >= 4:
+            x1, y1, x2, y2 = map(int, params[:4])
+            duration = int(params[4]) if len(params) > 4 else 300
+            if controller.swipe(x1, y1, x2, y2, duration):
+                click.echo(f"✓ Swiped from ({x1},{y1}) to ({x2},{y2})")
+        else:
+            click.echo("Usage: nexus bluestacks control swipe X1 Y1 X2 Y2 [duration_ms]", err=True)
+    
+    elif action == 'text':
+        text = ' '.join(params)
+        if controller.send_text(text):
+            click.echo(f"✓ Sent text: {text}")
+    
+    elif action == 'back':
+        if controller.press_key('KEYCODE_BACK'):
+            click.echo("✓ Pressed back button")
+    
+    elif action == 'home':
+        if controller.press_key('KEYCODE_HOME'):
+            click.echo("✓ Pressed home button")
+
+
+@bluestacks.command('auto-play')
+@click.argument('game_name')
+@click.option('--agent', '-a', help='Agent to use for playing')
+@click.option('--duration', '-d', default=300, help='Play duration in seconds')
+def bluestacks_autoplay(game_name, agent, duration):
+    """Auto-play Android game in BlueStacks"""
+    from nexus.emulators.bluestacks import BlueStacksController
+    from nexus.agents import load_agent
+    
+    controller = BlueStacksController()
+    
+    if not controller.adb_connected:
+        # Try to start BlueStacks
+        click.echo("Starting BlueStacks...")
+        if not controller.start_bluestacks():
+            click.echo("✗ Failed to start BlueStacks", err=True)
+            return
+    
+    # Load game registry
+    games_dir = Path.home() / ".nexus" / "games"
+    registry_file = games_dir / "registry.json"
+    
+    if registry_file.exists():
+        with open(registry_file) as f:
+            games = json.load(f)
+        
+        if game_name in games:
+            game_info = games[game_name]
+            if game_info.get('type') == 'android':
+                package = game_info.get('package')
+                
+                # Launch game
+                click.echo(f"Launching {game_name} ({package})...")
+                if not controller.launch_app(package):
+                    click.echo("✗ Failed to launch game", err=True)
+                    return
+                
+                time.sleep(5)  # Wait for game to load
+                
+                # Load agent if specified
+                if agent:
+                    click.echo(f"Loading agent: {agent}")
+                    ai_agent = load_agent(agent)
+                else:
+                    # Use simple scripted agent
+                    click.echo("Using default automation...")
+                
+                # Auto-play loop
+                start_time = time.time()
+                frame_count = 0
+                
+                with click.progressbar(length=duration, label='Auto-playing') as bar:
+                    while time.time() - start_time < duration:
+                        # Get screenshot
+                        screenshot = controller.get_screenshot()
+                        
+                        if screenshot is not None:
+                            frame_count += 1
+                            
+                            if agent and ai_agent:
+                                # Get action from AI agent
+                                action = ai_agent.act(screenshot)
+                                # Execute action
+                                # ... (action execution logic)
+                            else:
+                                # Simple automated actions
+                                if frame_count % 30 == 0:  # Every 30 frames
+                                    # Random tap
+                                    import random
+                                    x = random.randint(100, 1800)
+                                    y = random.randint(100, 900)
+                                    controller.tap(x, y)
+                        
+                        # Update progress
+                        elapsed = time.time() - start_time
+                        bar.update(min(1, elapsed))
+                        
+                        time.sleep(0.1)  # Small delay
+                
+                click.echo(f"\n✓ Auto-play complete. Processed {frame_count} frames")
+            else:
+                click.echo(f"✗ {game_name} is not an Android game", err=True)
+        else:
+            click.echo(f"✗ Game {game_name} not found. Register it first.", err=True)
+    else:
+        click.echo("✗ No games registered", err=True)
+
+
+@cli.command()
+@click.argument('game_name')
+@click.option('--duration', '-d', default=60, help='Capture duration in seconds')
+@click.option('--fps', default=30, help='Frames per second')
+@click.option('--output', '-o', help='Output directory')
+@click.option('--format', type=click.Choice(['frames', 'video', 'dataset']), default='frames')
+def capture(game_name, duration, fps, output, format):
+    """Capture game footage for dataset creation"""
+    click.echo(f"Starting capture for {game_name}...")
+    
+    output_dir = Path(output) if output else Path.home() / ".nexus" / "captures" / game_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    from nexus.window.window_controller import WindowController
+    from nexus.core.frame_grabber import FrameGrabber
+    
+    # Find game window
+    controller = WindowController()
+    windows = controller.list_windows()
+    game_window = None
+    
+    for w in windows:
+        if game_name.lower() in w.title.lower():
+            game_window = w
+            break
+    
+    if not game_window:
+        click.echo(f"✗ Game window not found: {game_name}", err=True)
+        sys.exit(1)
+    
+    # Focus the window
+    controller.focus_window(game_window)
+    
+    # Start capture
+    grabber = FrameGrabber()
+    frames_captured = 0
+    start_time = time.time()
+    
+    with click.progressbar(range(duration * fps), label='Capturing') as bar:
+        for i in bar:
+            frame = grabber.grab_frame(game_window)
+            
+            if format == 'frames':
+                # Save individual frames
+                frame_path = output_dir / f"frame_{i:06d}.jpg"
+                import cv2
+                cv2.imwrite(str(frame_path), frame)
+            
+            frames_captured += 1
+            
+            # Maintain FPS
+            elapsed = time.time() - start_time
+            expected = (i + 1) / fps
+            if elapsed < expected:
+                time.sleep(expected - elapsed)
+    
+    click.echo(f"✓ Captured {frames_captured} frames to {output_dir}")
+
+
+@cli.command()
+@click.argument('agent_path')
+@click.argument('game_name')
+@click.option('--episodes', '-e', default=1, help='Number of episodes to play')
+@click.option('--render', '-r', is_flag=True, help='Show gameplay')
+@click.option('--record', is_flag=True, help='Record gameplay')
+def play(agent_path, game_name, episodes, render, record):
+    """Play a game with a trained agent"""
+    click.echo(f"Loading agent from {agent_path}...")
+    
+    from nexus.agents import load_agent
+    from nexus.api.game_api import GameAPIFactory
+    
+    # Load agent
+    agent = load_agent(agent_path)
+    click.echo(f"✓ Loaded agent: {agent.name}")
+    
+    # Create game API
+    game_api = GameAPIFactory.create(game_name)
+    
+    for episode in range(episodes):
+        click.echo(f"\nEpisode {episode + 1}/{episodes}")
+        
+        obs = game_api.reset()
+        done = False
+        episode_reward = 0
+        steps = 0
+        
+        while not done:
+            # Get action from agent
+            action = agent.act(obs, deterministic=True)
+            
+            # Execute action
+            obs, reward, done, info = game_api.step(action)
+            
+            episode_reward += reward
+            steps += 1
+            
+            if render:
+                # Display current frame
+                import cv2
+                if hasattr(obs, 'shape') and len(obs.shape) == 3:
+                    cv2.imshow(f'Nexus - {game_name}', obs)
+                    cv2.waitKey(1)
+        
+        click.echo(f"Episode complete: Reward = {episode_reward:.2f}, Steps = {steps}")
+    
+    click.echo("\n✓ Playback complete")
+
+
+@cli.command()
+@click.argument('type', type=click.Choice(['game-api', 'agent', 'plugin', 'config']))
+@click.argument('name')
+@click.option('--output', '-o', help='Output directory')
+@click.option('--template', '-t', help='Template to use')
+def generate(type, name, output, template):
+    """Generate code from templates"""
+    output_dir = Path(output) if output else Path.cwd() / name
+    
+    templates = {
+        'game-api': 'game_api_template.py',
+        'agent': 'agent_template.py',
+        'plugin': 'plugin_template.py',
+        'config': 'config_template.yaml'
+    }
+    
+    click.echo(f"Generating {type}: {name}")
+    
+    # Create output directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    if type == 'game-api':
+        # Generate game API implementation
+        api_content = f'''"""
+Game API implementation for {name}
+"""
+
+from nexus.api.game_api import BaseGameAPI
+import numpy as np
+
+
+class {name.replace("-", "").capitalize()}API(BaseGameAPI):
+    """API for {name} game"""
+    
+    def __init__(self):
+        super().__init__()
+        self.observation_space = np.zeros((480, 640, 3))
+        self.action_space = ['up', 'down', 'left', 'right', 'action']
+    
+    def reset(self):
+        """Reset the game"""
+        # TODO: Implement game reset
+        return self.get_observation()
+    
+    def step(self, action):
+        """Execute an action"""
+        # TODO: Implement action execution
+        obs = self.get_observation()
+        reward = 0
+        done = False
+        info = {{}}
+        return obs, reward, done, info
+    
+    def get_observation(self):
+        """Get current game state"""
+        # TODO: Implement observation capture
+        return np.zeros((480, 640, 3))
+'''
+        
+        with open(output_dir / f"{name}_api.py", 'w') as f:
+            f.write(api_content)
+        
+        click.echo(f"✓ Generated game API at {output_dir}")
+    
+    elif type == 'plugin':
+        # Use plugin manager to generate
+        from nexus.plugins import EnhancedPluginManager
+        
+        plugins_dir = Path.home() / ".nexus" / "plugins"
+        manager = EnhancedPluginManager(plugins_dir)
+        
+        plugin_dir = manager.generate('game', name, output_dir)
+        click.echo(f"✓ Generated plugin at {plugin_dir}")
+    
+    elif type == 'config':
+        # Generate configuration template
+        config_content = {
+            'name': name,
+            'version': '1.0.0',
+            'game': {
+                'window_name': name,
+                'resolution': [640, 480],
+                'fps': 60
+            },
+            'agent': {
+                'type': 'dqn',
+                'learning_rate': 0.001,
+                'batch_size': 32
+            },
+            'training': {
+                'episodes': 1000,
+                'save_interval': 100
+            }
+        }
+        
+        with open(output_dir / 'config.yaml', 'w') as f:
+            yaml.dump(config_content, f, default_flow_style=False)
+        
+        click.echo(f"✓ Generated config at {output_dir}")
+    
+    else:
+        click.echo(f"Template generation for {type} not implemented yet", err=True)
+
+
+@cli.command()
+@click.option('--port', '-p', default=8080, help='Port for debugger')
+@click.option('--host', '-h', default='localhost', help='Host for debugger')
+def visual_debugger(port, host):
+    """Launch visual debugging interface"""
+    click.echo(f"Starting visual debugger on {host}:{port}")
+    
+    from nexus.debug.visual_debugger import VisualDebugger
+    
+    debugger = VisualDebugger(host=host, port=port)
+    
+    try:
+        debugger.start()
+        click.echo(f"✓ Visual debugger running at http://{host}:{port}")
+        click.echo("Press Ctrl+C to stop")
+        
+        # Keep running
+        while True:
+            time.sleep(1)
+    
+    except KeyboardInterrupt:
+        click.echo("\nStopping debugger...")
+        debugger.stop()
+        click.echo("✓ Debugger stopped")
+
+
+@cli.command()
+def gui():
+    """Launch the Nexus GUI (similar to SerpentAI's visual interface)"""
+    click.echo("Launching Nexus GUI...")
+    
+    try:
+        from nexus.gui.main_window import main
+        main()
+    except ImportError as e:
+        click.echo(f"✗ GUI dependencies not installed: {e}", err=True)
+        click.echo("\nTo use the GUI, install PyQt5:")
+        click.echo("  pip install PyQt5")
+        click.echo("\nAlternatively, use the web-based visual debugger:")
+        click.echo("  nexus visual-debugger")
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Failed to launch GUI: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()

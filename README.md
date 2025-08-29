@@ -226,6 +226,60 @@ nexus plugin list              # List installed plugins
 nexus plugin remove <name>     # Remove a plugin
 ```
 
+## 🔌 Official Plugins
+
+We maintain a comprehensive collection of production-ready plugins in our **[Official Plugin Repository](https://github.com/neophrythe/nexus-plugins)**!
+
+### Featured Plugins
+
+| Plugin | Description | Install |
+|--------|-------------|---------|
+| **[Auto-Aim](https://github.com/neophrythe/nexus-plugins/tree/main/plugins/auto_aim)** | Advanced aim assistance with prediction algorithms | `nexus plugin install auto-aim` |
+| **[Speed Runner](https://github.com/neophrythe/nexus-plugins/tree/main/plugins/speed_runner)** | Speedrun optimization and route planning | `nexus plugin install speed-runner` |
+| **[Discord Integration](https://github.com/neophrythe/nexus-plugins/tree/main/plugins/discord_integration)** | Real-time Discord notifications and bot control | `nexus plugin install discord-integration` |
+| **[Performance Monitor](https://github.com/neophrythe/nexus-plugins/tree/main/plugins/performance_monitor)** | FPS, CPU, GPU monitoring with overlay | `nexus plugin install performance-monitor` |
+| **[Game State Logger](https://github.com/neophrythe/nexus-plugins/tree/main/plugins/game_state_logger)** | Comprehensive state logging & replay system | `nexus plugin install game-state-logger` |
+
+### Installing Plugins
+
+```bash
+# From official repository
+nexus plugin install auto-aim
+
+# From GitHub URL
+nexus plugin install https://github.com/neophrythe/nexus-plugins/tree/main/plugins/auto_aim
+
+# From local directory
+nexus plugin install ./my-custom-plugin
+
+# List all available plugins
+nexus plugin search
+```
+
+### Creating Your Own Plugin
+
+```bash
+# Generate plugin template
+nexus generate plugin my-awesome-plugin
+
+# Navigate to plugin
+cd my-awesome-plugin
+
+# Test your plugin
+nexus plugin test .
+
+# Submit to official repository
+# Fork https://github.com/neophrythe/nexus-plugins
+# Add your plugin and create a PR!
+```
+
+Visit the **[Plugin Repository](https://github.com/neophrythe/nexus-plugins)** for:
+- 📦 Complete plugin list
+- 📖 Plugin development guide
+- 🤝 Contributing guidelines
+- 🎮 Game-specific plugins
+- 🤖 AI enhancement plugins
+
 ## 🏗️ Architecture
 
 ```

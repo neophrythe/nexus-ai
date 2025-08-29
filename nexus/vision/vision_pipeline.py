@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Tuple
 from dataclasses import dataclass
 import asyncio
 import cv2

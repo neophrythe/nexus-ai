@@ -19,4 +19,3 @@ setup(
         ],
     },
 )
-ENDFILE < /dev/null

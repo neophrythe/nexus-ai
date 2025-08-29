@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-ai-gpu
+  namespace: nexus
+  labels:
+    app: nexus-ai-gpu
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus-ai-gpu
+  template:
+    metadata:
+      labels:
+        app: nexus-ai-gpu
+        version: v1.0.0
+    spec:
+      nodeSelector:
+        accelerator: nvidia-tesla-v100  # Or your GPU type
+      containers:
+      - name: nexus-gpu
+        image: nexus-ai:gpu
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: api
+        env:
+        - name: NEXUS_ENV
+          value: "production"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility"
+        - name: REDIS_HOST
+          value: "redis-service"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "16Gi"
+            cpu: "8000m"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: cache
+          mountPath: /app/cache
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: nexus-models-pvc
+      - name: cache
+        emptyDir: {}
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-gpu-service
+  namespace: nexus
+  labels:
+    app: nexus-ai-gpu
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: api
+  selector:
+    app: nexus-ai-gpu

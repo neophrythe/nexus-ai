@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Optional, Any, Type
+from typing import Dict, List, Optional, Any, Type, Tuple
 from pathlib import Path
 import structlog
 
